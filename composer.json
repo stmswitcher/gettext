@@ -1,7 +1,7 @@
 {
     "name": "stmswitcher/gettext",
     "license": "MIT",
-    "description": "Simple library to handle gettext translations in Lumen framework",
+    "description": "Simple library to handle gettext translations in PHP applications",
     "type": "library",
     "require-dev": {
         "phpunit/phpunit": "^8.5"

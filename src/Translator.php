@@ -44,6 +44,18 @@ class Translator
     }
 
     /**
+     * @param string $locale
+     *
+     * @return $this
+     */
+    public function setLocale(string $locale): self
+    {
+        $this->locale = $locale;
+
+        return $this;
+    }
+
+    /**
      * @return string Get path to folder with messages
      */
     public function getBasePath(): string
