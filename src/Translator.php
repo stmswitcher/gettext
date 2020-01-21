@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace stmswitcher\gettext;
 
 use stmswitcher\gettext\Exception\FileException;
+use stmswitcher\gettext\Exception\GettextException;
 use stmswitcher\gettext\FileReader\MoFileReader;
 
 /**
@@ -32,15 +33,23 @@ class Translator
     private $basePath;
 
     /**
+     * @var bool If true - class will be throwing exception, if value is false and something goes wrong, untranslated
+     * string will be returned.
+     */
+    private $debug = false;
+
+    /**
      * Translator constructor.
      *
      * @param string $locale
      * @param string $basePath
+     * @param bool $debug
      */
-    public function __construct(string $locale, string $basePath)
+    public function __construct(string $locale, string $basePath, bool $debug = false)
     {
         $this->locale = $locale;
         $this->basePath = $basePath;
+        $this->debug = $debug;
     }
 
     /**
@@ -70,8 +79,7 @@ class Translator
      * @param string|null $locale Target locale (to which language translate), if null, default locale will be used
      *
      * @return string
-     * @throws Exception\InvalidMoFileException
-     * @throws FileException
+     * @throws GettextException
      */
     public function __(
         $textToTranslate,
@@ -83,7 +91,16 @@ class Translator
         $hasPlaceholders = is_array($textToTranslate);
 
         $string = $hasPlaceholders ? reset($textToTranslate) : $textToTranslate;
-        $translation = $this->loadMessages($locale, $domain, $context)[$string] ?? $string;
+
+        try {
+            $translation = $this->loadMessages($locale, $domain, $context)[$string] ?? $string;
+        } catch (GettextException $exception) {
+            if ($this->debug) {
+                throw $exception;
+            }
+            
+            return $string;
+        }
 
         if ($hasPlaceholders) {
             return $this->replacePlaceholders($translation, array_slice($textToTranslate, 1));
