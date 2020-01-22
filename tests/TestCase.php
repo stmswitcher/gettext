@@ -6,7 +6,7 @@ namespace stmswitcher\gettext\tests;
 /**
  * Base class for tests.
  *
- * @author Denis Nochevkin <denis.nochevkin@aboutyou.de>
+ * @author Denis Alexandrov <stm.switcher@gmail.com>
  * @date 15.01.2020
  */
 class TestCase extends \PHPUnit\Framework\TestCase
