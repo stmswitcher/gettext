@@ -38,6 +38,13 @@ class Translator
      */
     private $debug = false;
 
+    private $useFallback = false;
+
+    /**
+     * @var MoFileReader
+     */
+    private $loader;
+
     /**
      * Translator constructor.
      *
@@ -50,6 +57,22 @@ class Translator
         $this->locale = $locale;
         $this->basePath = $basePath;
         $this->debug = $debug;
+
+        try {
+            $filename = $this->getFileName($locale, self::DEFAULT_TRANSLATION_DOMAIN);
+            $fileHandler = fopen($filename, 'rb');
+            $extension = substr($filename, -2);
+            switch ($extension) {
+                case 'mo':
+                    $loader = new MoFileReader($fileHandler);
+                    break;
+                default:
+                    throw new FileException('Unsupported dictionary file exception');
+            }
+            $this->loader = $loader;
+        } catch (FileException $exception) {
+            $this->useFallback = true;
+        }
     }
 
     /**
@@ -75,30 +98,31 @@ class Translator
     /**
      * @param string|array $textToTranslate String of text to be translated or an array in case text has placeholders
      * @param string $domain Which translations domain to use
-     * @param string $context Context of the text (ex. urls, cli etc.)
-     * @param string|null $locale Target locale (to which language translate), if null, default locale will be used
+     * @param string|null $context Context of the text (ex. urls, cli etc.)
      *
      * @return string
-     * @throws GettextException
+     * @throws Exception\InvalidMoFileException
+     * @throws FileException
      */
     public function __(
         $textToTranslate,
         string $domain = self::DEFAULT_TRANSLATION_DOMAIN,
-        string $context = null,
-        string $locale = null
+        string $context = null
     ): string {
-        $locale = $locale ?? $this->locale;
         $hasPlaceholders = is_array($textToTranslate);
 
         $string = $hasPlaceholders ? reset($textToTranslate) : $textToTranslate;
 
         try {
-            $translation = $this->loadMessages($locale, $domain, $context)[$string] ?? $string;
+            if ($this->useFallback) {
+                return $textToTranslate;
+            }
+            $translation = $this->loadMessages($this->locale, $domain, $context)[$string] ?? $string;
         } catch (GettextException $exception) {
             if ($this->debug) {
                 throw $exception;
             }
-            
+
             return $string;
         }
 
@@ -127,18 +151,7 @@ class Translator
             return $this->messages[$key];
         }
 
-        $fileName = $this->getFileName($locale, $domain);
-
-        $extension = substr($fileName, -2);
-        switch ($extension) {
-            case 'mo':
-                $loader = new MoFileReader();
-                break;
-            default:
-                throw new FileException('Unsupported dictionary file exception');
-        }
-
-        $this->messages[$key] = $loader->loadTranslations($fileName, $context);
+        $this->messages[$key] = $this->loader->loadTranslations($context);
 
         return $this->messages[$key];
     }

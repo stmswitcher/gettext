@@ -39,11 +39,6 @@ class TranslatorTest extends TestCase
         $this->assertSame('This is a test translation', $this->translator->__('Test translation', 'main'));
     }
 
-    public function testTranslateAnotherLocale()
-    {
-        $this->assertSame('тестовая-ссылка', $this->translator->__('Test url', 'main', 'urls', 'ru_RU'));
-    }
-
     public function testTranslateWithPlaceholders()
     {
         $this->assertSame('Welcome to test page', $this->translator->__(['greet {title}', '{title}' => 'test page']));
