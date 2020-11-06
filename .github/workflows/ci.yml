@@ -33,7 +33,7 @@ jobs:
     - name: PHPUnit (php-actions)
       # You may pin to the exact commit or the version.
       # uses: php-actions/phpunit@3a5951632654f875c3a2e3704199f3e63d8d4230
-      uses: php-actions/phpunit@v9
+      uses: php-actions/phpunit@v8
       with:
         args: --bootstrap vendor/autoload.php tests/TranslatorTest.php
   
