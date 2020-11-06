@@ -35,7 +35,7 @@ jobs:
       # uses: php-actions/phpunit@3a5951632654f875c3a2e3704199f3e63d8d4230
       uses: php-actions/phpunit@v9
       with:
-        args: ./tests/TranslatorTest.php
+        args: --bootstrap vendor/autoload.php ./tests/TranslatorTest.php
   
     # Add a test script to composer.json, for instance: "test": "vendor/bin/phpunit"
     # Docs: https://getcomposer.org/doc/articles/scripts.md
