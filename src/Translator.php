@@ -38,6 +38,10 @@ class Translator
      */
     private $debug = false;
 
+    /**
+     * @var bool If true - will return original entry, instead of the translation.
+     * Can be set f.e. when translation file is not available.
+     */
     private $useFallback = false;
 
     /**
