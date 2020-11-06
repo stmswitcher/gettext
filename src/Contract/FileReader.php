@@ -14,10 +14,9 @@ interface FileReader
     /**
      * Read translations from a file for given context.
      *
-     * @param string $fileName
      * @param string|null $context
      *
      * @return array Source message => translation
      */
-    public function loadTranslations(string $fileName, ?string $context = null): array;
+    public function loadTranslations(?string $context = null): array;
 }

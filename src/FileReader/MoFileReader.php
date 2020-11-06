@@ -23,28 +23,41 @@ class MoFileReader implements FileReader
     private $useBigEndian;
 
     /**
+     * @var
+     */
+    private $handle;
+
+    /**
+     * MoFileReader constructor.
+     * @param $handle
+     */
+    public function __construct($handle)
+    {
+        $this->handle = $handle;
+    }
+
+    /**
      * {@inheritDoc}
      * @throws InvalidMoFileException
      */
-    public function loadTranslations(string $fileName, ?string $context = null): array
+    public function loadTranslations(?string $context = null): array
     {
-        $handle = fopen($fileName, 'rb');
+        rewind($this->handle);
 
-        $this->parseMagicNumber($handle);
-        $this->parseRevisionNumber($handle);
+        $this->parseMagicNumber();
+        $this->parseRevisionNumber();
 
         /** @var int $translationsCount Amount of strings */
-        $translationsCount = $this->readInteger($handle);
+        $translationsCount = $this->readInteger();
         /** @var int $sourceOffset Offset of table with original strings */
-        $sourceOffset = $this->readInteger($handle);
+        $sourceOffset = $this->readInteger();
         /** @var int $translationOffset Offset of table with translated strings */
-        $translationOffset = $this->readInteger($handle);
+        $translationOffset = $this->readInteger();
 
-        list($sourceLengths, $sourceOffsets) = $this->readOffsets($handle, $translationsCount, $sourceOffset);
-        list($translationLengths, $translationOffsets) = $this->readOffsets($handle, $translationsCount, $translationOffset);
+        list($sourceLengths, $sourceOffsets) = $this->readOffsets($translationsCount, $sourceOffset);
+        list($translationLengths, $translationOffsets) = $this->readOffsets($translationsCount, $translationOffset);
 
-        $translations = $this->readTranslations(
-            $handle,
+        return $this->readTranslations(
             $context,
             $translationsCount,
             $sourceLengths,
@@ -52,22 +65,16 @@ class MoFileReader implements FileReader
             $translationLengths,
             $translationOffsets
         );
-
-        fclose($handle);
-
-        return $translations;
     }
 
     /**
      * Parse magic in MO file.
      *
-     * @param resource $handle
-     *
      * @throws InvalidMoFileException
      */
-    private function parseMagicNumber($handle): void
+    private function parseMagicNumber(): void
     {
-        $unpackedData = unpack('c', $this->readByte($handle, 4));
+        $unpackedData = unpack('c', $this->readByte(4));
         $magicNumber = current($unpackedData);
 
         switch ($magicNumber) {
@@ -85,13 +92,12 @@ class MoFileReader implements FileReader
     /**
      * Check mo file revision.
      *
-     * @param resource $handle
      *
      * @throws InvalidMoFileException
      */
-    private function parseRevisionNumber($handle): void
+    private function parseRevisionNumber(): void
     {
-        $revision = $this->readInteger($handle);
+        $revision = $this->readInteger();
         if ($revision != 0) {
             throw new InvalidMoFileException("revision number is invalid: $revision");
         }
@@ -100,21 +106,20 @@ class MoFileReader implements FileReader
     /**
      * Read lengths and offsets from table.
      *
-     * @param resource $handle
      * @param int $translationCount
      * @param int $offset Position where to look at
      *
      * @return array Lengths, Offsets
      */
-    private function readOffsets($handle, int $translationCount, int $offset): array
+    private function readOffsets(int $translationCount, int $offset): array
     {
         $lengths = $offsets = [];
 
-        fseek($handle, $offset);
+        fseek($this->handle, $offset);
 
         for($index = 0; $index < $translationCount; ++$index) {
-            $lengths[] = $this->readInteger($handle);
-            $offsets[] = $this->readInteger($handle);
+            $lengths[] = $this->readInteger();
+            $offsets[] = $this->readInteger();
         }
 
         return [$lengths, $offsets];
@@ -123,7 +128,6 @@ class MoFileReader implements FileReader
     /**
      * Build resulting array of source strings as keys and translated strings as values.
      *
-     * @param resource $handle
      * @param string|null $context
      * @param int $translationCount
      * @param array $sourceLengths
@@ -134,7 +138,6 @@ class MoFileReader implements FileReader
      * @return array
      */
     private function readTranslations(
-        $handle,
         ?string $context,
         int $translationCount,
         array $sourceLengths,
@@ -146,7 +149,7 @@ class MoFileReader implements FileReader
 
         for ($translationIndex = 0; $translationIndex < $translationCount; ++$translationIndex) {
             $id = $sourceOffsets[$translationIndex] > 0
-                ? $this->readString($handle, $sourceLengths[$translationIndex], $sourceOffsets[$translationIndex])
+                ? $this->readString($sourceLengths[$translationIndex], $sourceOffsets[$translationIndex])
                 : null;
             $eotPos = $id ? strpos($id, chr(4)) : false;
 
@@ -157,7 +160,6 @@ class MoFileReader implements FileReader
                 }
 
                 $result[$id] = $this->readString(
-                    $handle,
                     $translationLengths[$translationIndex],
                     $translationOffsets[$translationIndex]
                 );
@@ -170,43 +172,41 @@ class MoFileReader implements FileReader
     /**
      * Read integer from binary string.
      *
-     * @param resource $handle
      *
      * @return int
      */
-    private function readInteger($handle): int
+    private function readInteger(): int
     {
-        $array=unpack($this->useBigEndian ? 'N' : 'V', $this->readByte($handle, 4));
+        $array=unpack($this->useBigEndian ? 'N' : 'V', $this->readByte(4));
         return current($array);
     }
 
     /**
      * Read string of $length characters from binary string.
      *
-     * @param resource $handle
      * @param int $length
      *
+     * @param int|null $offset
      * @return string|null
      */
-    private function readString($handle, int $length, ?int $offset = null): ?string
+    private function readString(int $length, ?int $offset = null): ?string
     {
         if ($offset !== null) {
-            fseek($handle, $offset);
+            fseek($this->handle, $offset);
         }
 
-        return $length > 0 ? $this->readByte($handle, $length) : null;
+        return $length > 0 ? $this->readByte($length) : null;
     }
 
     /**
      * Read given $amount of bytes from the $handle resource.
      *
-     * @param resource $handle
      * @param int $amount
      *
      * @return false|string
      */
-    private function readByte($handle, int $amount)
+    private function readByte(int $amount)
     {
-        return fread($handle, $amount);
+        return fread($this->handle, $amount);
     }
 }

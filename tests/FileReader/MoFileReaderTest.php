@@ -20,8 +20,8 @@ class MoFileReaderTest extends TestCase
      */
     public function testLoadTranslations()
     {
-        $reader = new MoFileReader();
-        $result = $reader->loadTranslations(__DIR__ . '/../resources/test.mo', 'urls');
+        $reader = new MoFileReader(fopen(__DIR__ . '/../resources/common.mo', 'rb'));
+        $result = $reader->loadTranslations( 'urls');
 
         $this->assertSame([
             'Test url' => 'test-url',
